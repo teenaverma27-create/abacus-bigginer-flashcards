@@ -3,45 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Abacus Flashcards</title>
+<title>Abacus Flashcards Pro</title>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background: #f4f6f8;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #6dd5ed, #2193b0);
+  overflow-x: hidden;
+}
+
+/* Floating shapes background */
+body::before {
+  content: "";
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.2) 2px, transparent 2px);
+  background-size: 40px 40px;
+  z-index: -1;
 }
 
 .container {
-  margin-top: 30px;
+  text-align: center;
+  padding: 20px;
+  color: white;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+.controls {
+  margin: 10px;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  background: #ff9800;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #e68900;
 }
 
 .card {
-  width: 280px;
-  height: 320px;
-  margin: auto;
+  width: 300px;
+  height: 340px;
+  margin: 20px auto;
   perspective: 1000px;
 }
 
 .inner {
-  position: relative;
   width: 100%;
   height: 100%;
   transition: transform 0.6s;
   transform-style: preserve-3d;
+  position: relative;
 }
 
 .flipped {
   transform: rotateY(180deg);
 }
 
-.front, .back {
+.face {
   position: absolute;
   width: 100%;
   height: 100%;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  border-radius: 15px;
   backface-visibility: hidden;
   display: flex;
   align-items: center;
@@ -50,7 +86,8 @@ body {
 
 .back {
   transform: rotateY(180deg);
-  font-size: 48px;
+  font-size: 50px;
+  color: #333;
   font-weight: bold;
 }
 
@@ -66,36 +103,25 @@ body {
 }
 
 .bead {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  margin: 3px;
+  margin: 4px;
 }
 
-.upper {
-  background: #444;
-}
-
-.lower {
-  background: orange;
-}
+.upper { background: #444; }
+.lower { background: #ff5722; }
 
 .active {
-  transform: translateY(10px);
+  transform: translateY(8px);
 }
 
-button {
-  margin: 15px 5px;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 6px;
-  background: #007bff;
-  color: white;
-  cursor: pointer;
+.progress {
+  margin-top: 10px;
 }
 
-button:hover {
-  background: #0056b3;
+.level-select {
+  margin: 10px;
 }
 </style>
 </head>
@@ -103,73 +129,92 @@ button:hover {
 <body>
 
 <div class="container">
-  <h2>Abacus Flashcards</h2>
-  <p id="progress"></p>
+  <h1>🧮 Abacus Flashcards</h1>
+
+  <div class="level-select">
+    <button onclick="setLevel(1)">Level 1</button>
+    <button onclick="setLevel(2)">Level 2</button>
+    <button onclick="setLevel(3)">Level 3</button>
+  </div>
 
   <div class="card" onclick="flipCard()">
     <div class="inner" id="cardInner">
-      <div class="front" id="front"></div>
-      <div class="back" id="back"></div>
+      <div class="face front" id="front"></div>
+      <div class="face back" id="back"></div>
     </div>
   </div>
 
-  <div>
+  <div class="controls">
     <button onclick="prevCard()">Prev</button>
     <button onclick="nextCard()">Next</button>
+    <button onclick="shuffle()">Shuffle</button>
   </div>
+
+  <div class="progress" id="progress"></div>
 </div>
 
+<audio id="flipSound">
+  <source src="https://www.soundjay.com/buttons/sounds/button-16.mp3">
+</audio>
+
 <script>
+let level = 1;
 let cards = [];
-
-// Generate 25 numbers (0–24)
-for (let i = 0; i < 25; i++) {
-  cards.push(i);
-}
-
 let current = 0;
 
-function createAbacus(num) {
-  let tens = Math.floor(num / 10);
-  let ones = num % 10;
+function generateCards() {
+  cards = [];
 
-  return `
-    <div class="abacus">
-      ${createRod(tens)}
-      ${createRod(ones)}
-    </div>
-  `;
+  if (level === 1) {
+    for (let i = 0; i < 10; i++) cards.push(i);
+  } else if (level === 2) {
+    for (let i = 10; i < 30; i++) cards.push(i);
+  } else {
+    for (let i = 0; i < 25; i++) cards.push(Math.floor(Math.random()*50));
+  }
+
+  current = 0;
+  renderCard();
 }
 
 function createRod(value) {
-  let upperActive = value >= 5;
-  let lowerCount = upperActive ? value - 5 : value;
+  let upper = value >= 5;
+  let lowerCount = upper ? value - 5 : value;
 
-  let lowerBeads = '';
+  let lower = "";
   for (let i = 0; i < 4; i++) {
-    lowerBeads += `<div class="bead lower ${i < lowerCount ? 'active' : ''}"></div>`;
+    lower += `<div class="bead lower ${i < lowerCount ? 'active':''}"></div>`;
   }
 
   return `
-    <div class="rod">
-      <div class="bead upper ${upperActive ? 'active' : ''}"></div>
-      ${lowerBeads}
-    </div>
-  `;
+  <div class="rod">
+    <div class="bead upper ${upper ? 'active':''}"></div>
+    ${lower}
+  </div>`;
+}
+
+function createAbacus(num) {
+  let tens = Math.floor(num/10);
+  let ones = num % 10;
+
+  return `
+  <div class="abacus">
+    ${createRod(tens)}
+    ${createRod(ones)}
+  </div>`;
 }
 
 function renderCard() {
   let num = cards[current];
-
   document.getElementById("front").innerHTML = createAbacus(num);
   document.getElementById("back").innerText = num;
-  document.getElementById("progress").innerText = (current + 1) + " / 25";
-
+  document.getElementById("progress").innerText = `Card ${current+1} / ${cards.length}`;
   document.getElementById("cardInner").classList.remove("flipped");
 }
 
 function flipCard() {
   document.getElementById("cardInner").classList.toggle("flipped");
+  document.getElementById("flipSound").play();
 }
 
 function nextCard() {
@@ -182,7 +227,18 @@ function prevCard() {
   renderCard();
 }
 
-renderCard();
+function shuffle() {
+  cards.sort(() => Math.random() - 0.5);
+  current = 0;
+  renderCard();
+}
+
+function setLevel(l) {
+  level = l;
+  generateCards();
+}
+
+generateCards();
 </script>
 
 </body>
